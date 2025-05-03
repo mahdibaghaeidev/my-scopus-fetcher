@@ -2,25 +2,32 @@ name: Fetch Scopus Papers Daily
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # This cron expression means: "Run every day at midnight UTC"
-  workflow_dispatch:     # This allows you to trigger the workflow manually from GitHub
+    - cron: '0 0 * * *'  # This runs the workflow every day at midnight UTC
+  workflow_dispatch:  # Allows you to manually trigger the workflow from GitHub UI
 
 jobs:
-  fetch:
-    runs-on: ubuntu-latest  # Runs the job on the latest Ubuntu machine
+  fetch-papers:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4  # This checks out your repo so that it can be used in the workflow
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
+      # Step 2: Set up Node.js environment
       - name: Set up Node.js
-        uses: actions/setup-node@v4  # This sets up Node.js environment for running the script
+        uses: actions/setup-node@v2
         with:
-          node-version: "20"  # Specify the version of Node.js to use
+          node-version: '16'
 
+      # Step 3: Install dependencies
       - name: Install dependencies
-        run: npm install  # Install the required dependencies from package.json
+        run: npm install
 
-      - name: Run script
+      # Step 4: Run the fetchPapers.js script
+      - name: Run Scopus fetcher script
         env:
-          ELSEVIER_API_KEY: ${{ secrets.ELSEVIER_API_KEY }}  # Fetches the API key from the GitHub secrets
-        run: npm start  # Runs the script (defined in package.json as "npm start")
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ELSEVIER_API_KEY: ${{ secrets.ELSEVIER_API_KEY }}
+        run: npm start
