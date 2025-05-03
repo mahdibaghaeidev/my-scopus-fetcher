@@ -1,0 +1,26 @@
+name: Fetch Scopus Papers Daily
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # This cron expression means: "Run every day at midnight UTC"
+  workflow_dispatch:     # This allows you to trigger the workflow manually from GitHub
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest  # Runs the job on the latest Ubuntu machine
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4  # This checks out your repo so that it can be used in the workflow
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4  # This sets up Node.js environment for running the script
+        with:
+          node-version: "20"  # Specify the version of Node.js to use
+
+      - name: Install dependencies
+        run: npm install  # Install the required dependencies from package.json
+
+      - name: Run script
+        env:
+          ELSEVIER_API_KEY: ${{ secrets.ELSEVIER_API_KEY }}  # Fetches the API key from the GitHub secrets
+        run: npm start  # Runs the script (defined in package.json as "npm start")
