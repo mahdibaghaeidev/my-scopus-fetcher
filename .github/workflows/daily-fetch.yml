@@ -1,9 +1,9 @@
-name: Fetch Scopus Papers Daily
+name: Fetch Scopus Papers Monthly
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # This runs the workflow every day at midnight UTC
-  workflow_dispatch:  # Allows you to manually trigger the workflow from GitHub UI
+    - cron: '0 0 1 * *'  # Runs at 00:00 UTC on the 1st day of every month
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
 
 jobs:
   fetch-papers:
