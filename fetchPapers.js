@@ -6,14 +6,14 @@ import { createClient } from "@supabase/supabase-js";
 dotenv.config();
 
 // Supabase setup
-const supabaseUrl = process.env.SUPABASE_URL; // Add your Supabase URL here
-const supabaseKey = process.env.SUPABASE_API_KEY; // Add your Supabase API key here
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_API_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Scopus author ID
 const SCOPUS_AUTHOR_ID = "59361198200";
 
-// Fetch and save Scopus papers
+// Fetch and sync Scopus papers with Supabase
 const fetchScopusPapers = async () => {
   try {
     const response = await axios.get(
@@ -33,31 +33,55 @@ const fetchScopusPapers = async () => {
       return;
     }
 
-    // Iterate over the results and save the details to Supabase
     for (const paper of results) {
       const title = paper["dc:title"];
-      const citationCount = paper["citedby-count"];
-      const year = paper["prism:coverDate"]?.slice(0, 4); // Extract the year
+      const citationCount = parseInt(paper["citedby-count"], 10);
+      const year = paper["prism:coverDate"]?.slice(0, 4);
 
-      // Insert paper details into Supabase
-      const { data, error } = await supabase
-        .from("papers") // Replace with your table name
-        .insert([
-          {
-            title,
-            citation_count: citationCount,
-            year,
-          },
-        ]);
+      // 1️⃣ Check if paper already exists by title
+      const { data: existing, error: fetchError } = await supabase
+        .from("papers")
+        .select("id, citation_count")
+        .eq("title", title)
+        .single();
 
-      if (error) {
-        console.error("Error inserting paper into Supabase:", error.message);
+      if (fetchError && fetchError.code !== "PGRST116") {
+        // PGRST116 = no rows found (normal case for insert)
+        console.error("Error checking existing paper:", fetchError.message);
+        continue;
+      }
+
+      if (existing) {
+        // 2️⃣ Paper exists — update if citation count has changed
+        if (existing.citation_count !== citationCount) {
+          const { error: updateError } = await supabase
+            .from("papers")
+            .update({ citation_count: citationCount })
+            .eq("id", existing.id);
+
+          if (updateError) {
+            console.error("Error updating citation count:", updateError.message);
+          } else {
+            console.log(`✅ Updated citation count for: ${title}`);
+          }
+        } else {
+          console.log(`ℹ️ No change in citation count: ${title}`);
+        }
       } else {
-        console.log(`Paper added: ${title}`);
+        // 3️⃣ Paper doesn't exist — insert it
+        const { error: insertError } = await supabase
+          .from("papers")
+          .insert([{ title, citation_count: citationCount, year }]);
+
+        if (insertError) {
+          console.error("Error inserting paper:", insertError.message);
+        } else {
+          console.log(`✅ New paper added: ${title}`);
+        }
       }
     }
   } catch (error) {
-    console.error("Error fetching Scopus papers:", error.message);
+    console.error("❌ Error fetching Scopus papers:", error.message);
   }
 };
 
